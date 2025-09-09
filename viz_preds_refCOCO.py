@@ -65,13 +65,13 @@ with cols[0]:
 st.text_input(
     "Enter text", key="user_text"
 )
-st.markdown("---")
 
 st.session_state.current_proxy_idx = proxy_idx[st.session_state.idx]
 st.session_state.image_path = df.iloc[st.session_state.current_proxy_idx]["img_path"]
 st.session_state.caps = df.iloc[st.session_state.current_proxy_idx]["captions"]
 
 st.write("**GT Caption:**", st.session_state.caps)
+st.markdown("---")
 
 #image inputs
 gt = softCE_targets[st.session_state.current_proxy_idx]
