@@ -37,48 +37,48 @@ model.eval()
 roberta = torch.hub.load('pytorch/fairseq', 'roberta.large')
 roberta.eval();roberta.to(device)
 
-
 ### idx to images that weren't seen during training
 proxy_idx = json.load(open("data/uncontaminated_image_ids.json", "r"))
 
 
 if 'idx' not in st.session_state:
     st.session_state.idx = 0
-    st.session_state.proxy_idx = proxy_idx[st.session_state.idx]
-    st.session_state.image_path = df.iloc[st.session_state.proxy_idx]["img_path"]
-    st.session_state.caps = df.iloc[st.session_state.proxy_idx]["captions"]
-    # st.session_state.user_text = None
-
-
-def go_to_next_image():
-    st.session_state.idx +=1
-    st.session_state.user_text = "" # shouldn't it be None
-
-def go_to_prev_image():
-    st.session_state.idx -=1
+if 'user_text' not in st.session_state:
     st.session_state.user_text = ""
 
-current_proxy_idx = proxy_idx[st.session_state.idx]
-image_path = df.iloc[current_proxy_idx]["img_path"]
-caps = df.iloc[current_proxy_idx]["captions"]
+def clear_user_text():
+    st.session_state.user_text = ""
 
-col1, col2 = st.columns([1, 8])
+cols = st.columns(1)
+with cols[0]:
+    st.session_state.idx = st.number_input(
+        label="image index:",
+        min_value=0,
+        max_value=len(proxy_idx)-1,
+        # value=st.session_state.idx, # Defaults to the current index
+        step=1,
+        on_change=clear_user_text,
+    )
+    user_text = ""
 
-with col1:
-    st.button("Prev", on_click=go_to_prev_image)
 
-with col2:
-    st.button("Next", on_click=go_to_next_image)
+st.text_input(
+    "Enter text", key="user_text"
+)
+st.markdown("---")
+
+st.session_state.current_proxy_idx = proxy_idx[st.session_state.idx]
+st.session_state.image_path = df.iloc[st.session_state.current_proxy_idx]["img_path"]
+st.session_state.caps = df.iloc[st.session_state.current_proxy_idx]["captions"]
 
 st.write("**GT Caption:**", st.session_state.caps)
 
-
 #image inputs
-gt = softCE_targets[st.session_state.proxy_idx]
+gt = softCE_targets[st.session_state.current_proxy_idx]
 gt_heatmap = gt.view((N,N))
 image = Image.open(st.session_state.image_path).convert('RGB')
 #load precomputed text_feats
-precomp_text_feat = torch.load(os.path.join(text_feats_dir, 'test', f"{st.session_state.proxy_idx}.pt")).to(device).unsqueeze(0)
+precomp_text_feat = torch.load(os.path.join(text_feats_dir, 'test', f"{st.session_state.current_proxy_idx}.pt")).to(device).unsqueeze(0)
 
 def text_to_heatmap(text_feat):        
         attn_mask = torch.ones((1,text_feat.size(1))).bool().to(text_feat.device)
@@ -90,17 +90,9 @@ def text_to_heatmap(text_feat):
         st.pyplot(fig, use_container_width=True)
 
 
-user_text = st.text_input(
-    "Enter text", key="user_text"
-)
-st.markdown("---")
 
 if st.session_state.user_text:
-    default_text_feat = roberta.extract_features(roberta.encode(user_text.lower().strip()))
-    text_to_heatmap(default_text_feat)
+    user_text_feat = roberta.extract_features(roberta.encode(st.session_state.user_text.lower().strip()))
+    text_to_heatmap(user_text_feat)
 else:
     text_to_heatmap(precomp_text_feat)
-
-# attn_map = model.visual_encoder.trunk.blocks[-1].attn.attn_map[0]
-# attn_fig = plot_attn_maps(attn_map)
-# st.pyplot(attn_fig, use_container_width=True)
