@@ -25,13 +25,13 @@ def load_ade_data(data_dir):
     return class2file
 
 @st.cache_data
-def load_df(data_dir):
-    csv_path = os.path.join(data_dir, "referit/refCOCOg", "test.csv")
+def load_df(data_path):
+    csv_path = os.path.join(data_path)
     return pd.read_csv(csv_path)
 
 @st.cache_resource
-def init_model(img_size, patch_size, ckpt_dir, ckpt):
-    sys.path.append("/home/manugaur/mllm_inversion")
+def init_model(img_size, patch_size, ckpt_dir, ckpt, repo_path):
+    sys.path.append(repo_path)
     from src.models import FlamingoCrossAttn
     from src.training import lora_siglip
     from src.dataloaders.utils import eval_transform
@@ -90,6 +90,11 @@ def viz_heatmap(img: Image.Image, gt_map: torch.Tensor, pred_map: torch.Tensor):
     img: PIL Image
     gt_map, pred_map: torch.Tensor of shape (16,16)
     """
+
+    _spacer, c1, c2, c3,  = st.columns([0.3, 1, 1, 1])
+    c1.markdown("##### Image")
+    c2.markdown("##### GT heatmap")
+    c3.markdown("##### Predicted")
     H = W = 224
     # 1) Resize image
     img_resized = img.resize((H, W))
